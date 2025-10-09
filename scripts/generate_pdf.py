@@ -404,7 +404,23 @@ def process_inline_markdown(text):
     
     # Handle links
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
-    
+
+    # Whitelist specific inline HTML tags by un-escaping them outside of code spans
+    # Currently allow <br>, <br/>, and <br /> to render as line breaks in HTML output
+    def _unescape_whitelist(segment):
+        # normalize any &lt;br>, &lt;br/>, &lt;br /> (case-insensitive)
+        segment = re.sub(r'&lt;br\s*/?&gt;', '<br/>', segment, flags=re.IGNORECASE)
+        # also handle double-escaped variant: &amp;lt;br&amp;gt;
+        segment = re.sub(r'&amp;lt;br\s*/?&amp;gt;', '<br/>', segment, flags=re.IGNORECASE)
+        return segment
+
+    # Split on <code>...</code> to avoid altering content inside inline code spans
+    parts = re.split(r'(<code>.*?</code>)', text, flags=re.DOTALL)
+    for i in range(0, len(parts)):
+        if i % 2 == 0:  # outside code
+            parts[i] = _unescape_whitelist(parts[i])
+    text = ''.join(parts)
+
     return text
 
 def create_complete_html(html_content, title, toc_items=None, include_toc=True, template_name='default'):
