@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 0.75in;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', 'Times', serif;
+        line-height: 1.8;
+        color: #2c2c2c;
+        margin: 0;
+        padding: 0;
+        font-size: 11pt;
+        background: white;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+
+      .title-page {
+        text-align: center;
+        padding: 4in 0 2in 0;
+        border-bottom: 3px double #8b4513;
+        margin-bottom: 2em;
+      }
+
+      .title-page h1 {
+        font-size: 2.8em;
+        color: #8b4513;
+        margin-bottom: 0.5em;
+        font-weight: normal;
+        font-variant: small-caps;
+      }
+
+      .title-page .subtitle {
+        font-size: 1.4em;
+        color: #a0522d;
+        margin-bottom: 2em;
+        font-style: italic;
+      }
+
+      .title-page .author {
+        font-size: 1.2em;
+        color: #8b4513;
+      }
+
+      .slide-title {
+        page-break-before: always;
+      }
+
+      .main-title {
+        page-break-before: always;
+      }
+
+      h1 {
+        font-size: 1.8em;
+        margin-top: 2em;
+        margin-bottom: 1em;
+        color: #8b4513;
+        font-weight: normal;
+        border-bottom: 2px solid #d2691e;
+        padding-bottom: 0.3em;
+      }
+
+      h2 {
+        font-size: 1.5em;
+        margin-top: 1.8em;
+        margin-bottom: 0.8em;
+        color: #a0522d;
+        font-weight: normal;
+      }
+
+      h3 {
+        font-size: 1.3em;
+        margin-top: 1.5em;
+        margin-bottom: 0.7em;
+        color: #8b4513;
+        font-style: italic;
+      }
+
+      h4 {
+        font-size: 1.1em;
+        margin-top: 1.2em;
+        margin-bottom: 0.6em;
+        color: #a0522d;
+        font-weight: bold;
+      }
+
+      p {
+        margin-bottom: 1.2em;
+        text-align: justify;
+        text-indent: 1.5em;
+      }
+
+      ul,
+      ol {
+        margin-bottom: 1.2em;
+        padding-left: 2.5em;
+      }
+
+      li {
+        margin-bottom: 0.5em;
+      }
+
+      .toc {
+        padding: 2em 0;
+        text-align: center;
+      }
+
+      .toc h2 {
+        margin-bottom: 2em;
+        color: #8b4513;
+        font-variant: small-caps;
+        text-decoration: underline;
+        text-decoration-style: double;
+      }
+
+      .toc ul {
+        list-style: none;
+        padding-left: 0;
+        text-align: left;
+        max-width: 500px;
+        margin: 0 auto;
+      }
+
+      .toc > ul > li {
+        margin-bottom: 1em;
+        border-bottom: 1px dotted #d2691e;
+        padding-bottom: 0.5em;
+      }
+
+      .toc ul ul {
+        padding-left: 2em;
+        margin-top: 0.5em;
+      }
+
+      .toc a {
+        text-decoration: none;
+        color: #8b4513;
+      }
+
+      .toc-level-1 {
+        font-size: 1.1em;
+        color: #8b4513;
+        font-variant: small-caps;
+      }
+
+      .toc-level-2 {
+        font-size: 1em;
+        color: #a0522d;
+        font-style: italic;
+      }
+
+      pre {
+        background-color: #fdf5e6;
+        border: 1px solid #d2691e;
+        border-left: 4px solid #8b4513;
+        padding: 1em;
+        margin: 1.5em 0;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9em;
+        line-height: 1.4;
+      }
+
+      code {
+        background-color: #fdf5e6;
+        border: 1px solid #d2691e;
+        padding: 0.2em 0.4em;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9em;
+      }
+
+      pre code {
+        background-color: transparent;
+        border: none;
+        padding: 0;
+      }
+
+      blockquote {
+        border-left: 4px solid #d2691e;
+        margin: 1.5em 0;
+        padding: 1em 0 1em 2em;
+        background-color: #fdf5e6;
+        font-style: italic;
+        color: #654321;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5em 0;
+        border: 2px solid #8b4513;
+      }
+
+      th,
+      td {
+        border: 1px solid #d2691e;
+        padding: 10px;
+        text-align: left;
+      }
+
+      th {
+        background-color: #f4e4bc;
+        color: #8b4513;
+        font-weight: bold;
+        font-variant: small-caps;
+      }
+
+      tr:nth-child(even) {
+        background-color: #fffef7;
+      }
+    </style>
+  </head>
+  <body>
+    {{content}}
+  </body>
+</html>

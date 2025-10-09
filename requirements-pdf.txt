@@ -1,0 +1,4 @@
+# Requirements for PDF generation script
+markdown>=3.4.0
+weasyprint>=59.0
+Pygments>=2.15.0
