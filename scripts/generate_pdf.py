@@ -402,6 +402,18 @@ def process_inline_markdown(text):
     text = re.sub(r'\*([^*]+)\*', r'<em>\1</em>', text)
     text = re.sub(r'_([^_]+)_', r'<em>\1</em>', text)
     
+    # Handle images (must come before links since they use similar syntax)
+    # Fix image paths: convert images/filename.png to just filename.png for temp directory
+    def fix_image_path(match):
+        alt_text = match.group(1)
+        image_path = match.group(2)
+        # If path starts with images/, strip it since images are copied to temp directory root
+        if image_path.startswith('images/'):
+            image_path = image_path[7:]  # Remove 'images/' prefix
+        return f'<img src="{image_path}" alt="{alt_text}" style="max-width: 100%; height: auto;" />'
+    
+    text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', fix_image_path, text)
+    
     # Handle links
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
 
@@ -480,6 +492,80 @@ def generate_toc_html(toc_items):
     toc_html.append('</ul>')  # Close the main list
     toc_html.append('</div>')
     return '\n'.join(toc_html)
+
+def process_images_in_directory(directory_path, temp_dir):
+    """
+    Copy images from subdirectories to temp directory and return mapping
+    Looks for images in 'images/' subdirectory
+    Returns dict mapping lab numbers to their figure images
+    """
+    directory = Path(directory_path)
+    images_dir = directory / "images"
+    image_mapping = {}
+    
+    if not images_dir.exists():
+        return image_mapping
+    
+    print(f"🖼️  Processing images from {images_dir}")
+    
+    # Find all image files in the images directory
+    image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg']
+    image_files = []
+    
+    for ext in image_extensions:
+        image_files.extend(images_dir.glob(f"*{ext}"))
+        image_files.extend(images_dir.glob(f"*{ext.upper()}"))
+    
+    # Process each image file
+    for image_file in image_files:
+        # Copy image to temp directory
+        temp_image_path = temp_dir / image_file.name
+        
+        try:
+            # Use subprocess to copy file (preserves permissions and handles edge cases)
+            subprocess.run(['cp', str(image_file), str(temp_image_path)], check=True)
+            print(f"📋 Copied image: {image_file.name}")
+            
+            # Parse filename to extract lab and figure numbers
+            # Expected format: lab##f###.ext (e.g., lab01f001.png)
+            filename = image_file.stem
+            if filename.startswith('lab') and 'f' in filename:
+                try:
+                    parts = filename.split('f')
+                    if len(parts) == 2:
+                        lab_part = parts[0]  # e.g., "lab01"
+                        fig_part = parts[1]  # e.g., "001"
+                        
+                        # Extract lab number
+                        lab_num = lab_part.replace('lab', '').lstrip('0') or '0'
+                        lab_num = int(lab_num)
+                        
+                        # Extract figure number
+                        fig_num = int(fig_part.lstrip('0') or '0')
+                        
+                        # Store in mapping
+                        if lab_num not in image_mapping:
+                            image_mapping[lab_num] = []
+                        image_mapping[lab_num].append({
+                            'filename': image_file.name,
+                            'figure_num': fig_num,
+                            'temp_path': temp_image_path
+                        })
+                        
+                except (ValueError, IndexError):
+                    print(f"⚠️  Could not parse lab/figure from filename: {filename}")
+            else:
+                # Handle special images (like title-page.png, logos, etc.)
+                print(f"📎 Found non-lab image: {image_file.name}")
+                
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Error copying image {image_file.name}: {e}")
+    
+    # Sort figures within each lab by figure number
+    for lab_num in image_mapping:
+        image_mapping[lab_num].sort(key=lambda x: x['figure_num'])
+    
+    return image_mapping
 
 def combine_markdown_files(directory_path):
     """
@@ -565,51 +651,60 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
         print(f"🔄 Processing directory: {directory}")
         print(f"📄 Output file: {output_file}")
         
-        # Combine all markdown files (returns title page and main content separately)
-        title_page_content, main_content = combine_markdown_files(directory_path)
-        
-        # Extract table of contents from main content only
-        toc_items = extract_table_of_contents(main_content) if include_toc else None
-        
-        # Process title page and main content separately to avoid TOC placeholder issues
-        title_page_html = ""
-        main_content_html = ""
-        
-        # Process title page if it exists
-        if title_page_content:
-            title_page_html = process_markdown_simple(title_page_content)
-        
-        # Process main content
-        if main_content:
-            main_content_html = process_markdown_simple(main_content)
-        
-        # Combine HTML parts with TOC in the correct order
-        html_parts = []
-        
-        # Add title page
-        if title_page_html:
-            html_parts.append(title_page_html)
-        
-        # Add TOC if requested (no page break before TOC)
-        if toc_items and include_toc:
-            toc_html = generate_toc_html(toc_items)
-            html_parts.append(toc_html)
-        
-        # Add main content (headers already have page-break-before in CSS)
-        if main_content_html:
-            html_parts.append(main_content_html)
-        
-        # Join all parts without automatic page breaks
-        html_content = ''.join(html_parts)
-        
-        full_html = create_complete_html(html_content, directory.name, toc_items, include_toc, template_name)
-        
-        # Create temporary HTML file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as temp_html:
-            temp_html.write(full_html)
-            temp_html_path = temp_html.name
-        
-        try:
+        # Create temporary directory for processing (including images)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Process images from subdirectories
+            image_mapping = process_images_in_directory(directory_path, temp_path)
+            
+            # Combine all markdown files (returns title page and main content separately)
+            title_page_content, main_content = combine_markdown_files(directory_path)
+            
+            # Note: Images are copied to temp directory and will be available for markdown references
+            # No automatic insertion - images are referenced directly in the markdown content
+            
+            # Extract table of contents from main content only
+            toc_items = extract_table_of_contents(main_content) if include_toc else None
+            
+            # Process title page and main content separately to avoid TOC placeholder issues
+            title_page_html = ""
+            main_content_html = ""
+            
+            # Process title page if it exists
+            if title_page_content:
+                title_page_html = process_markdown_simple(title_page_content)
+            
+            # Process main content
+            if main_content:
+                main_content_html = process_markdown_simple(main_content)
+            
+            # Combine HTML parts with TOC in the correct order
+            html_parts = []
+            
+            # Add title page
+            if title_page_html:
+                html_parts.append(title_page_html)
+            
+            # Add TOC if requested (no page break before TOC)
+            if toc_items and include_toc:
+                toc_html = generate_toc_html(toc_items)
+                html_parts.append(toc_html)
+            
+            # Add main content (headers already have page-break-before in CSS)
+            if main_content_html:
+                html_parts.append(main_content_html)
+            
+            # Join all parts without automatic page breaks
+            html_content = ''.join(html_parts)
+            
+            full_html = create_complete_html(html_content, directory.name, toc_items, include_toc, template_name)
+            
+            # Create temporary HTML file in the temp directory
+            temp_html_path = temp_path / 'document.html'
+            with open(temp_html_path, 'w', encoding='utf-8') as temp_html:
+                temp_html.write(full_html)
+            
             # Try different methods to convert HTML to PDF
             success = False
             
@@ -660,13 +755,6 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
                 print(f"📄 HTML file saved: {html_file}")
                 print(f"💡 Open the HTML file in Chrome and use 'Print to PDF' to generate the PDF manually")
                 return False
-                
-        finally:
-            # Clean up temporary file
-            try:
-                os.unlink(temp_html_path)
-            except:
-                pass
         
     except Exception as e:
         print(f"❌ Error generating PDF: {e}")
