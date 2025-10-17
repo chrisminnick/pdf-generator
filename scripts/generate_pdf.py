@@ -700,6 +700,12 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
             
             full_html = create_complete_html(html_content, directory.name, toc_items, include_toc, template_name)
             
+            # Save HTML file for inspection
+            html_output_path = output_file.with_suffix('.html')
+            with open(html_output_path, 'w', encoding='utf-8') as html_file:
+                html_file.write(full_html)
+            print(f"📄 HTML file saved: {html_output_path}")
+            
             # Create temporary HTML file in the temp directory
             temp_html_path = temp_path / 'document.html'
             with open(temp_html_path, 'w', encoding='utf-8') as temp_html:
