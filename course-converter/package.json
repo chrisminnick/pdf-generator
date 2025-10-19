@@ -1,0 +1,27 @@
+{
+  "name": "course-converter",
+  "version": "1.0.0",
+  "description": "Convert PPTX slides and DOCX labs to modern course structure using pandoc",
+  "main": "convert-course.js",
+  "scripts": {
+    "convert": "node convert-course.js",
+    "test": "node test-converter.js"
+  },
+  "keywords": [
+    "course-conversion",
+    "pandoc",
+    "education",
+    "markdown",
+    "pptx",
+    "docx"
+  ],
+  "author": "Chris Minnick",
+  "license": "ISC",
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "bin": {
+    "convert-course": "./convert-course.js"
+  }
+}
