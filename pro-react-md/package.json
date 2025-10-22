@@ -1,0 +1,28 @@
+{
+  "name": "./pro-react-md",
+  "version": "1.0.0",
+  "description": "Private admin repository containing source materials and generation scripts for the ./pro React Md course.",
+  "main": "build.js",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chrisminnick/./pro-react-md.git"
+  },
+  "keywords": [
+    "course",
+    "education",
+    "react",
+    "javascript",
+    "frontend",
+    "web-development"
+  ],
+  "author": "Chris Minnick",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/chrisminnick/./pro-react-md/issues"
+  },
+  "homepage": "https://github.com/chrisminnick/./pro-react-md#readme"
+}
