@@ -166,35 +166,73 @@ def process_markdown_simple(markdown_content):
                 if not code_block_stack:
                     html_lines.append('</code></pre>')
                 else:
+                    # Still inside a nested code block, treat as regular code line - preserve indentation
                     code_line = line
-                    if line.startswith('   ') or line.startswith('    '):
-                        code_line = line[3:] if line.startswith('   ') else line[4:]
-                    html_lines.append(html.escape(code_line))
+                    
+                    # Apply the same blank line skipping logic for nested blocks
+                    current_block = code_block_stack[-1]
+                    if not current_block['first_line_added'] and code_line.strip() == '':
+                        continue  # Skip blank lines at the start of nested code blocks
+                    
+                    if not current_block['first_line_added'] and code_line.strip() != '':
+                        # First line of nested code block
+                        if html_lines and html_lines[-1].endswith('">'):
+                            html_lines[-1] = html_lines[-1][:-1] + '>' + html.escape(code_line)
+                        else:
+                            html_lines.append(html.escape(code_line))
+                        current_block['first_line_added'] = True
+                    else:
+                        html_lines.append(html.escape(code_line))
                 continue
             else:
                 # This starts a new code block
                 code_lang = stripped_line[backtick_count:].strip()
                 
+                # Check if there's code content on the same line as the opening backticks
+                backtick_prefix = '`' * backtick_count
+                prefix_len = len(backtick_prefix + code_lang)
+                remaining_content = line[prefix_len:].strip()
+                
                 if not code_block_stack:
-                    html_lines.append(f'<pre><code class="language-{code_lang}">')
+                    # Top-level code block
+                    if remaining_content:
+                        # Code starts on the same line as the backticks
+                        html_lines.append(f'<pre><code class="language-{code_lang}">{html.escape(remaining_content)}')
+                    else:
+                        # Code starts on the next line
+                        html_lines.append(f'<pre><code class="language-{code_lang}">')
                 else:
-                    code_line = line
-                    if line.startswith('   ') or line.startswith('    '):
-                        code_line = line[3:] if line.startswith('   ') else line[4:]
-                    html_lines.append(html.escape(code_line))
+                    # Nested code block - just add the content if present
+                    if remaining_content:
+                        html_lines.append(html.escape(remaining_content))
                 
                 code_block_stack.append({
                     'backticks': backtick_count,
-                    'language': code_lang
+                    'language': code_lang,
+                    'first_line_added': remaining_content != ""
                 })
                 continue
         
         if code_block_stack:
-            # We're inside a code block
+            # We're inside a code block - preserve all indentation
             code_line = line
-            if line.startswith('   ') or line.startswith('    '):
-                code_line = line[3:] if line.startswith('   ') else line[4:]
-            html_lines.append(html.escape(code_line))
+            
+            # Skip blank lines until we've added the first actual line of code
+            current_block = code_block_stack[-1]
+            if not current_block['first_line_added'] and code_line.strip() == '':
+                continue  # Skip blank lines at the start of code blocks
+            
+            # If this is the first non-blank line and we haven't added content yet
+            if not current_block['first_line_added'] and code_line.strip() != '':
+                # This is the first line of code - add it directly after the opening tag
+                # We need to modify the last line in html_lines to include this content
+                if html_lines and html_lines[-1].endswith('">'):
+                    html_lines[-1] = html_lines[-1][:-1] + '>' + html.escape(code_line)
+                else:
+                    html_lines.append(html.escape(code_line))
+                current_block['first_line_added'] = True
+            else:
+                html_lines.append(html.escape(code_line))
             continue
         
         # Handle HTML comments - skip them entirely
