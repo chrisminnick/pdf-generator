@@ -199,13 +199,20 @@
         background: #1a202c;
         color: #e2e8f0;
         border-radius: 8px;
-        padding: 2.4em;
+        padding: 1.8em;
         margin: 1.5em 0;
-        overflow-x: auto;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: pre-wrap;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
         font-family: 'Fira Code', 'SF Mono', Monaco, 'Cascadia Code', monospace;
-        font-size: 0.9em;
-        line-height: 1.2;
+        font-size: 0.75em;
+        line-height: 1.4;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 100%;
+        width: 100%;
       }
 
       code {

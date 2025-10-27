@@ -169,13 +169,20 @@
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 4px;
-        padding: 2em;
+        padding: 1.5em;
         margin: 1em 0;
-        overflow-x: auto;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: pre-wrap;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
         font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas,
           'Courier New', monospace;
-        font-size: 0.9em;
-        line-height: 1.2;
+        font-size: 0.8em;
+        line-height: 1.4;
+        max-width: 100%;
+        width: 100%;
       }
 
       code {
