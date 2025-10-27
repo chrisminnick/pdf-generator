@@ -128,6 +128,45 @@ def create_heading_id(title):
             .replace('?', '')
             .replace('!', ''))
 
+def filter_instructor_notes(markdown_content, include_instructor_notes=False):
+    """
+    Filter instructor notes from markdown content.
+    
+    Args:
+        markdown_content (str): The markdown content to filter
+        include_instructor_notes (bool): If True, keep instructor notes. If False, remove them.
+    
+    Returns:
+        str: Filtered markdown content
+    """
+    if include_instructor_notes:
+        return markdown_content
+    
+    lines = markdown_content.split('\n')
+    filtered_lines = []
+    skip_instructor_note = False
+    
+    for line in lines:
+        # Check if this line starts an instructor note
+        if line.strip().startswith('> **INSTRUCTOR NOTE:**'):
+            skip_instructor_note = True
+            continue
+        
+        # Check if we're in an instructor note block
+        if skip_instructor_note:
+            # If this line is still part of the blockquote, skip it
+            if line.startswith('> ') or line.strip() == '>':
+                continue
+            # If we hit a non-blockquote line, we're done with the instructor note
+            else:
+                skip_instructor_note = False
+                # Don't skip this line since it's not part of the instructor note
+                filtered_lines.append(line)
+        else:
+            filtered_lines.append(line)
+    
+    return '\n'.join(filtered_lines)
+
 def process_markdown_simple(markdown_content):
     """
     Simple markdown to HTML conversion with slide breaks, lists, and tables
@@ -669,7 +708,7 @@ def combine_markdown_files(directory_path):
     
     return title_page_content, '\n'.join(main_content)
 
-def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_toc=True, template_name="default"):
+def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_toc=True, template_name="default", include_instructor_notes=False):
     """
     Convert all markdown files in a directory to PDF
     """
@@ -698,6 +737,12 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
             
             # Combine all markdown files (returns title page and main content separately)
             title_page_content, main_content = combine_markdown_files(directory_path)
+            
+            # Filter instructor notes based on flag
+            if title_page_content:
+                title_page_content = filter_instructor_notes(title_page_content, include_instructor_notes)
+            if main_content:
+                main_content = filter_instructor_notes(main_content, include_instructor_notes)
             
             # Note: Images are copied to temp directory and will be available for markdown references
             # No automatic insertion - images are referenced directly in the markdown content
@@ -817,6 +862,7 @@ Examples:
   python generate_pdf.py ./slides-source/ -o my-slides.pdf --template modern
   python generate_pdf.py ./docs/ --dist-dir ./output/ --template minimal
   python generate_pdf.py ./docs/ --no-toc --template default
+  python generate_pdf.py ./slides/ --instructor --template modern
 
 Templates:
   default   - Professional design with modern fonts (default)
@@ -830,6 +876,7 @@ Features:
 - Creates page breaks for # and ## headers
 - Generates table of contents after title page (unless --no-toc)
 - Supports multiple styling templates (see pdf-generator/templates/)
+- Instructor notes can be included with --instructor flag
 - Outputs PDF with same name as directory by default
         """
     )
@@ -862,6 +909,12 @@ Features:
         help='Template to use for PDF styling (default, minimal, modern, or custom template name)'
     )
     
+    parser.add_argument(
+        '--instructor',
+        action='store_true',
+        help='Include instructor notes (marked with "> **INSTRUCTOR NOTE:**") in the output'
+    )
+    
     args = parser.parse_args()
     
     directory_path = Path(args.directory_path)
@@ -876,7 +929,14 @@ Features:
         sys.exit(1)
     
     print("🔄 Processing markdown directory...")
-    success = markdown_to_pdf(str(directory_path), args.output, args.dist_dir, include_toc=not args.no_toc, template_name=args.template)
+    success = markdown_to_pdf(
+        str(directory_path), 
+        args.output, 
+        args.dist_dir, 
+        include_toc=not args.no_toc, 
+        template_name=args.template,
+        include_instructor_notes=args.instructor
+    )
     
     if success:
         print("🎉 PDF generated successfully!")
