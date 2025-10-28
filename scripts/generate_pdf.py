@@ -228,9 +228,17 @@ def process_markdown_simple(markdown_content):
                 code_lang = stripped_line[backtick_count:].strip()
                 
                 # Check if there's code content on the same line as the opening backticks
-                backtick_prefix = '`' * backtick_count
-                prefix_len = len(backtick_prefix + code_lang)
-                remaining_content = line[prefix_len:].strip()
+                # Find where the backticks start in the original line and calculate from there
+                backtick_start = line.find('`')
+                if backtick_start >= 0:
+                    after_backticks = line[backtick_start + backtick_count:]
+                    # Remove the language identifier to get any remaining content
+                    if code_lang and after_backticks.startswith(code_lang):
+                        remaining_content = after_backticks[len(code_lang):].strip()
+                    else:
+                        remaining_content = after_backticks.strip()
+                else:
+                    remaining_content = ""
                 
                 if not code_block_stack:
                     # Top-level code block
@@ -330,8 +338,11 @@ def process_markdown_simple(markdown_content):
                 html_lines.append(f'</{current_list_type}>')
                 in_list = False
                 current_list_type = None
-                # Reset numbering at deeper subsection
-                last_list_number = 0
+                # Don't reset numbering for h4 headers (Part 1, Part 2, etc.) to allow continuous numbering
+                # Only reset if this is not a "Part X:" header
+                title_text = line[5:].strip()
+                if not re.match(r'^Part \d+:', title_text):
+                    last_list_number = 0
             title_text = line[5:].strip()
             heading_id = create_heading_id(title_text)
             html_lines.append(f'<h4 id="{heading_id}">{html.escape(title_text)}</h4>')
@@ -360,9 +371,7 @@ def process_markdown_simple(markdown_content):
                 html_lines.append(f'</{current_list_type}>')
                 in_list = False
                 current_list_type = None
-                # Reset numbering when switching away from ordered lists
-                if new_list_type == 'ul':
-                    last_list_number = 0
+                # Don't reset numbering when switching to ul - keep it for continuation
             
             if not in_list:
                 if in_table:
@@ -404,8 +413,8 @@ def process_markdown_simple(markdown_content):
                 current_list_type = None
                 # Keep last_list_number to allow numbered list continuation
             elif in_list and current_list_type == 'ol':
-                # For numbered lists, only close on certain content types, not code blocks or regular text
-                # Allow continuation within the same subsection, but reset on headings handled above
+                # For numbered lists, keep them open through non-list content to allow continuation
+                # They will be closed only by headers or explicit resets handled above
                 pass
         
         # Handle tables
