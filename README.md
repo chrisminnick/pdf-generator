@@ -44,6 +44,7 @@ python3 scripts/generate_pdf.py /path/to/markdown-directory/ --no-toc
 - `# Header` creates a new page
 - `## Header` creates a new page
 - `### Header` and below do not create page breaks
+- `<!-- PAGE BREAK -->` comment forces a page break at any point
 
 ### Table of Contents
 
@@ -52,6 +53,25 @@ python3 scripts/generate_pdf.py /path/to/markdown-directory/ --no-toc
 - Nested structure: `#` headers are level 1, `##` headers are level 2
 - Clickable links to sections
 - Can be disabled with `--no-toc` option
+
+### Manual Page Breaks
+
+You can force a page break at any point in your markdown by inserting a comment:
+
+```markdown
+Some content here...
+
+<!-- PAGE BREAK -->
+
+Content continues on a new page...
+```
+
+This is useful for:
+
+- Breaking up long sections
+- Starting new topics on fresh pages
+- Controlling layout in continuous-flow templates (like setup-and-outline)
+- Ensuring specific content appears at the top of a page
 
 ## Dependencies
 

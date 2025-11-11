@@ -282,7 +282,21 @@ def process_markdown_simple(markdown_content):
                 html_lines.append(html.escape(code_line))
             continue
         
-        # Handle HTML comments - skip them entirely
+        # Handle HTML comments - check for special PAGE BREAK comment first
+        if '<!-- PAGE BREAK -->' in line.upper():
+            # Close any open elements before page break
+            if in_list:
+                html_lines.append(f'</{current_list_type}>')
+                in_list = False
+                current_list_type = None
+            if in_table:
+                html_lines.append('</tbody></table>')
+                in_table = False
+            # Insert a div with page-break-after CSS
+            html_lines.append('<div style="page-break-after: always;"></div>')
+            continue
+        
+        # Handle other HTML comments - skip them entirely
         if line.strip().startswith('<!--') or line.strip().endswith('-->') or ('<!--' in line and '-->' in line):
             continue
             
@@ -717,7 +731,7 @@ def combine_markdown_files(directory_path):
     
     return title_page_content, '\n'.join(main_content)
 
-def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_toc=True, template_name="default", include_instructor_notes=False):
+def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_toc=True, template_name="default", include_instructor_notes=False, pdf_title=None):
     """
     Convert all markdown files in a directory to PDF
     """
@@ -730,6 +744,9 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
             output_file = Path(dist_dir) / output_filename
         else:
             output_file = Path(output_file)
+        
+        # Use provided title or fallback to directory name
+        doc_title = pdf_title if pdf_title else directory.name
         
         # Ensure output directory exists
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -790,7 +807,7 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
             # Join all parts without automatic page breaks
             html_content = ''.join(html_parts)
             
-            full_html = create_complete_html(html_content, directory.name, toc_items, include_toc, template_name)
+            full_html = create_complete_html(html_content, doc_title, toc_items, include_toc, template_name)
             
             # Save HTML file for inspection
             html_output_path = output_file.with_suffix('.html')
@@ -924,6 +941,11 @@ Features:
         help='Include instructor notes (marked with "> **INSTRUCTOR NOTE:**") in the output'
     )
     
+    parser.add_argument(
+        '--title',
+        help='Document title for PDF metadata (default: directory name)'
+    )
+    
     args = parser.parse_args()
     
     directory_path = Path(args.directory_path)
@@ -944,7 +966,8 @@ Features:
         args.dist_dir, 
         include_toc=not args.no_toc, 
         template_name=args.template,
-        include_instructor_notes=args.instructor
+        include_instructor_notes=args.instructor,
+        pdf_title=args.title
     )
     
     if success:

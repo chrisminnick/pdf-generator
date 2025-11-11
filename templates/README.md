@@ -28,6 +28,15 @@ This directory contains HTML templates for the PDF generator. Each template defi
 - **File size**: Largest (0.6-1.2MB typical)
 - **Font**: Inter/system fonts with modern styling
 
+### setup-and-outline.html
+
+- **Style**: Professional design without page breaks
+- **Features**: Continuous flow layout, no page breaks for h1/h2 headers
+- **Best for**: Course setup guides, course descriptions, continuous documents
+- **File size**: Medium (0.4-0.8MB typical)
+- **Font**: System sans-serif (Segoe UI, SF Pro, etc.)
+- **Note**: Based on default template but removes automatic page breaks for headers
+
 ## Usage
 
 Use the `--template` parameter to specify a template:
@@ -41,6 +50,9 @@ python generate_pdf.py ./docs --template minimal
 
 # Use modern template
 python generate_pdf.py ./docs --template modern
+
+# Use setup-and-outline template (no page breaks)
+python generate_pdf.py ./setup-and-outline --template setup-and-outline
 ```
 
 ## Creating Custom Templates
