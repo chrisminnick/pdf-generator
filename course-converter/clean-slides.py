@@ -13,7 +13,7 @@ def clean_markdown_file(file_path):
         content = f.read()
     
     # Fix the header section
-    header_pattern = r'^# Advanced React Development\n\n## copyright.*?\n\n## version.*?\n\n## March 2024\n\n'
+    header_pattern = r'^# Advanced React Development\n\n## copyright.*?\n\n## version.*?\n\n## March 2025\n\n'
     new_header = '''# Advanced React Development
 
 **Advanced React concepts and best practices for experienced developers**
@@ -22,10 +22,10 @@ def clean_markdown_file(file_path):
 [https://github.com/chrisminnick/advanced-react](https://github.com/chrisminnick/advanced-react)
 
 **Version:** 1.3.0  
-**Date:** March 2024  
+**Date:** March 2025  
 **Author:** Chris Minnick
 
-**Copyright © 2024 WatzThis, Inc.**  
+**Copyright © 2025 WatzThis, Inc.**  
 All rights reserved.
 
 **Website:** [https://www.watzthis.com](https://www.watzthis.com)
