@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    <style>
+      @page {
+        size: 11in 8.5in landscape;
+        margin: 0.5in;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #1a1a1a;
+        color: #333;
+        overflow: hidden;
+        height: 100vh;
+      }
+
+      /* Print styles for PDF generation */
+      @media print {
+        body {
+          background: white;
+          overflow: visible;
+        }
+        
+        .slide-container {
+          display: block !important;
+          position: static !important;
+        }
+
+        .slide {
+          page-break-after: always;
+          display: block !important;
+          position: static !important;
+          min-height: 7.5in;
+          padding: 0.5in;
+          background: white;
+        }
+
+        .slide:last-child {
+          page-break-after: auto;
+        }
+
+        .controls,
+        .toc-sidebar {
+          display: none !important;
+        }
+
+        .slide-content {
+          max-height: none !important;
+          overflow: visible !important;
+        }
+      }
+
+      /* Screen styles for interactive slideshow */
+      @media screen {
+        .slide-container {
+          display: flex;
+          height: 100vh;
+          width: 100vw;
+          position: relative;
+        }
+
+        .toc-sidebar {
+          width: 280px;
+          background: #2c2c2c;
+          color: #f0f0f0;
+          overflow-y: auto;
+          padding: 20px;
+          border-right: 1px solid #444;
+          transition: transform 0.3s ease;
+          z-index: 100;
+        }
+
+        .toc-sidebar.hidden {
+          transform: translateX(-280px);
+        }
+
+        .toc-sidebar h2 {
+          margin: 0 0 20px 0;
+          font-size: 1.2em;
+          color: #fff;
+          border-bottom: 2px solid #444;
+          padding-bottom: 10px;
+        }
+
+        .toc-sidebar ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        .toc-sidebar li {
+          margin: 8px 0;
+        }
+
+        .toc-sidebar a {
+          color: #a0a0a0;
+          text-decoration: none;
+          display: block;
+          padding: 5px 10px;
+          border-radius: 4px;
+          transition: all 0.2s;
+          font-size: 0.95em;
+        }
+
+        .toc-sidebar a:hover {
+          background: #3c3c3c;
+          color: #fff;
+        }
+
+        .toc-sidebar a.active {
+          background: #0078d4;
+          color: #fff;
+        }
+
+        .toc-level-1 {
+          font-weight: 600;
+          padding-left: 10px;
+        }
+
+        .toc-level-2 {
+          padding-left: 30px;
+          font-size: 0.9em;
+        }
+
+        .toc-level-3 {
+          padding-left: 50px;
+          font-size: 0.85em;
+        }
+
+        .main-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          position: relative;
+          background: white;
+          min-height: 100vh;
+        }
+
+        .slide {
+          display: none;
+          width: 100%;
+          height: 100%;
+          padding: 60px 80px;
+          background: white;
+          overflow: hidden;
+        }
+
+        .slide.active {
+          display: flex;
+          flex-direction: column;
+          overflow-y: auto;
+        }
+
+        .slide-content {
+          flex: 1;
+          padding-right: 20px;
+        }
+
+        .controls {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          display: flex;
+          gap: 10px;
+          z-index: 1000;
+        }
+
+        .controls button {
+          background: #0078d4;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 16px;
+          font-weight: 500;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls button:hover:not(:disabled) {
+          background: #005a9e;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls button:disabled {
+          background: #ccc;
+          cursor: not-allowed;
+          opacity: 0.5;
+        }
+
+        .slide-counter {
+          position: fixed;
+          bottom: 20px;
+          left: 300px;
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          z-index: 1000;
+        }
+
+        .toc-toggle {
+          position: fixed;
+          top: 20px;
+          left: 20px;
+          background: #0078d4;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          z-index: 1000;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .toc-toggle:hover {
+          background: #005a9e;
+        }
+
+        /* Title page specific styles */
+        .title-page {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .title-page h1 {
+          font-size: 3em;
+          color: #1a1a1a;
+          margin-bottom: 0.5em;
+          font-weight: 300;
+        }
+
+        .title-page .subtitle {
+          font-size: 1.5em;
+          color: #666;
+          margin-bottom: 2em;
+        }
+
+        /* Regular slide content styles */
+        h1 {
+          font-size: 3em;
+          margin: 0 0 0.5em 0;
+          color: #1a1a1a;
+          font-weight: 600;
+          border-bottom: 3px solid #0078d4;
+          padding-bottom: 0.3em;
+        }
+
+        h2 {
+          font-size: 2.5em;
+          margin: 0.8em 0 0.5em 0;
+          color: #2c3e50;
+          font-weight: 500;
+        }
+
+        h3 {
+          font-size: 2em;
+          margin: 0.6em 0 0.4em 0;
+          color: #34495e;
+          font-weight: 500;
+        }
+
+        h4 {
+          font-size: 1.6em;
+          margin: 0.5em 0 0.3em 0;
+          color: #34495e;
+          font-weight: 500;
+        }
+
+        p {
+          margin-bottom: 1em;
+          line-height: 1.6;
+          font-size: 1.4em;
+        }
+
+        ul,
+        ol {
+          margin-bottom: 1em;
+          padding-left: 2em;
+          line-height: 1.8;
+          font-size: 1.4em;
+        }
+
+        li {
+          margin-bottom: 0.5em;
+        }
+
+        /* Hide instructor notes in student version */
+        .instructor-note {
+          display: none;
+        }
+
+        /* Hide instructor notes in student version */
+        blockquote:has(strong:first-child) strong:first-child:is([text*="INSTRUCTOR NOTE"]) {
+          display: none;
+        }
+
+        blockquote {
+          border-left: 4px solid #0078d4;
+          margin: 1em 0;
+          padding: 0.5em 0 0.5em 1em;
+          background-color: #f0f8ff;
+          font-style: italic;
+          color: #555;
+          font-size: 1.2em;
+        }
+        
+        /* Specifically hide instructor notes */
+        blockquote:has(strong) {
+          display: block;
+        }
+        
+        blockquote strong:first-child {
+          display: inline;
+        }
+
+        pre {
+          background-color: #f8f9fa;
+          border: 1px solid #e9ecef;
+          border-radius: 6px;
+          padding: 1.5em;
+          margin: 1em 0;
+          overflow-x: auto;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono',
+            Consolas, 'Courier New', monospace;
+          font-size: 1.1em;
+          line-height: 1.5;
+        }
+
+        code {
+          background-color: #f8f9fa;
+          border: 1px solid #e9ecef;
+          border-radius: 3px;
+          padding: 0.2em 0.4em;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono',
+            Consolas, 'Courier New', monospace;
+          font-size: 1.1em;
+        }
+
+        pre code {
+          background-color: transparent;
+          border: none;
+          padding: 0;
+        }
+
+        blockquote {
+          border-left: 4px solid #0078d4;
+          margin: 1em 0;
+          padding: 0.5em 0 0.5em 1em;
+          background-color: #f0f8ff;
+          font-style: italic;
+          color: #555;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 1em 0;
+          font-size: 1em;
+        }
+
+        th,
+        td {
+          border: 1px solid #ddd;
+          padding: 12px;
+          text-align: left;
+        }
+
+        th {
+          background-color: #0078d4;
+          color: white;
+          font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+
+        /* Keyboard shortcuts help */
+        .shortcuts-help {
+          position: fixed;
+          bottom: 80px;
+          right: 20px;
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 15px;
+          border-radius: 6px;
+          font-size: 12px;
+          opacity: 0;
+          transition: opacity 0.3s;
+          pointer-events: none;
+          z-index: 999;
+        }
+
+        .shortcuts-help.visible {
+          opacity: 1;
+        }
+
+        .shortcuts-help p {
+          margin: 5px 0;
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TOC Toggle Button -->
+    <button class="toc-toggle" onclick="toggleTOC()">☰ Menu</button>
+
+    <!-- Slide Counter -->
+    <div class="slide-counter">
+      <span id="current-slide">1</span> / <span id="total-slides">1</span>
+    </div>
+
+    <!-- Keyboard Shortcuts Help -->
+    <div class="shortcuts-help" id="shortcuts-help">
+      <p><strong>Keyboard Shortcuts:</strong></p>
+      <p>→ / Space: Next slide</p>
+      <p>← / Backspace: Previous slide</p>
+      <p>Home: First slide</p>
+      <p>End: Last slide</p>
+      <p>M: Toggle menu</p>
+      <p>?: Show/hide this help</p>
+    </div>
+
+    <div class="slide-container">
+      <!-- Table of Contents Sidebar -->
+      <div class="toc-sidebar" id="toc-sidebar">
+        <h2>Contents</h2>
+        <ul id="toc-list"></ul>
+      </div>
+
+      <!-- Main Content Area -->
+      <div class="main-content">
+        <div id="slides-container">{{content}}</div>
+      </div>
+    </div>
+
+    <!-- Navigation Controls -->
+    <div class="controls">
+      <button id="prev-btn" onclick="previousSlide()">← Previous</button>
+      <button id="next-btn" onclick="nextSlide()">Next →</button>
+    </div>
+
+    <script>
+      let currentSlide = 0;
+      let slides = [];
+      let tocVisible = true;
+
+      // Initialize slideshow
+      function initSlideshow() {
+        // Parse slides from content (each h1 or h2 starts a new slide)
+        const content = document.getElementById('slides-container');
+        const allElements = Array.from(content.children);
+
+        // Group elements into slides
+        let currentSlideElements = [];
+        slides = [];
+
+        // Check if first element is title page
+        let hasTitlePage = false;
+        if (
+          allElements.length > 0 &&
+          allElements[0].classList.contains('title-page')
+        ) {
+          slides.push({
+            elements: [allElements[0]],
+            title: 'Title Page',
+            level: 0,
+          });
+          hasTitlePage = true;
+        }
+
+        // Start from index 1 if we have a title page
+        const startIndex = hasTitlePage ? 1 : 0;
+
+        for (let i = startIndex; i < allElements.length; i++) {
+          const el = allElements[i];
+
+          // Check if this is a slide break (any h1, h2, or h3 starts a new slide)
+          if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3') {
+            // Save previous slide if it has content
+            if (currentSlideElements.length > 0) {
+              const title = getSlideTitle(currentSlideElements);
+              const level = getSlideLevel(currentSlideElements);
+              slides.push({
+                elements: currentSlideElements,
+                title: title,
+                level: level,
+              });
+              currentSlideElements = [];
+            }
+          }
+
+          currentSlideElements.push(el);
+        }
+
+        // Add last slide
+        if (currentSlideElements.length > 0) {
+          const title = getSlideTitle(currentSlideElements);
+          const level = getSlideLevel(currentSlideElements);
+          slides.push({
+            elements: currentSlideElements,
+            title: title,
+            level: level,
+          });
+        }
+
+        // Clear original content
+        content.innerHTML = '';
+
+        // Create slide divs
+        slides.forEach((slide, index) => {
+          const slideDiv = document.createElement('div');
+          slideDiv.className = 'slide';
+          slideDiv.id = `slide-${index}`;
+
+          const slideContent = document.createElement('div');
+          slideContent.className = 'slide-content';
+
+          slide.elements.forEach((el) => {
+            slideContent.appendChild(el.cloneNode(true));
+          });
+
+          slideDiv.appendChild(slideContent);
+          content.appendChild(slideDiv);
+        });
+
+        // Build TOC
+        buildTOC();
+
+        // Update counter
+        document.getElementById('total-slides').textContent = slides.length;
+
+        // Show first slide
+        showSlide(0);
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', handleKeyPress);
+
+        // Show shortcuts help briefly on load
+        setTimeout(() => {
+          const help = document.getElementById('shortcuts-help');
+          help.classList.add('visible');
+          setTimeout(() => {
+            help.classList.remove('visible');
+          }, 3000);
+        }, 1000);
+      }
+
+      function getSlideTitle(elements) {
+        // Find first h1, h2, or h3
+        for (const el of elements) {
+          if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3') {
+            let title = el.textContent.trim();
+            // Remove "Slide X.Y:" prefix if present
+            title = title.replace(/^Slide\s+[\d.]+:\s*/i, '');
+            return title;
+          }
+        }
+        return 'Slide';
+      }
+
+      function getSlideLevel(elements) {
+        // Determine if slide starts with h1 (level 1), h2 (level 2), or h3 (level 3)
+        for (const el of elements) {
+          if (el.tagName === 'H1') return 1;
+          if (el.tagName === 'H2') return 2;
+          if (el.tagName === 'H3') return 3;
+        }
+        return 1;
+      }
+
+      function buildTOC() {
+        const tocList = document.getElementById('toc-list');
+        tocList.innerHTML = '';
+
+        slides.forEach((slide, index) => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = '#';
+          a.textContent = slide.title;
+          a.className = `toc-level-${slide.level}`;
+          a.onclick = (e) => {
+            e.preventDefault();
+            showSlide(index);
+          };
+          li.appendChild(a);
+          tocList.appendChild(li);
+        });
+      }
+
+      function showSlide(index) {
+        if (index < 0 || index >= slides.length) return;
+
+        // Hide all slides
+        document.querySelectorAll('.slide').forEach((slide) => {
+          slide.classList.remove('active');
+        });
+
+        // Show current slide
+        const slideEl = document.getElementById(`slide-${index}`);
+        if (slideEl) {
+          slideEl.classList.add('active');
+        }
+
+        currentSlide = index;
+
+        // Update counter
+        document.getElementById('current-slide').textContent = index + 1;
+
+        // Update navigation buttons
+        document.getElementById('prev-btn').disabled = index === 0;
+        document.getElementById('next-btn').disabled =
+          index === slides.length - 1;
+
+        // Update TOC active state
+        document.querySelectorAll('.toc-sidebar a').forEach((link, i) => {
+          if (i === index) {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
+        });
+
+        // Scroll TOC to active item
+        const activeLink = document.querySelector('.toc-sidebar a.active');
+        if (activeLink) {
+          activeLink.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          });
+        }
+      }
+
+      function nextSlide() {
+        if (currentSlide < slides.length - 1) {
+          showSlide(currentSlide + 1);
+        }
+      }
+
+      function previousSlide() {
+        if (currentSlide > 0) {
+          showSlide(currentSlide - 1);
+        }
+      }
+
+      function toggleTOC() {
+        const sidebar = document.getElementById('toc-sidebar');
+        const counter = document.querySelector('.slide-counter');
+        tocVisible = !tocVisible;
+
+        if (tocVisible) {
+          sidebar.classList.remove('hidden');
+          counter.style.left = '300px';
+        } else {
+          sidebar.classList.add('hidden');
+          counter.style.left = '20px';
+        }
+      }
+
+      function handleKeyPress(e) {
+        switch (e.key) {
+          case 'ArrowRight':
+          case ' ':
+            e.preventDefault();
+            nextSlide();
+            break;
+          case 'ArrowLeft':
+          case 'Backspace':
+            e.preventDefault();
+            previousSlide();
+            break;
+          case 'Home':
+            e.preventDefault();
+            showSlide(0);
+            break;
+          case 'End':
+            e.preventDefault();
+            showSlide(slides.length - 1);
+            break;
+          case 'm':
+          case 'M':
+            e.preventDefault();
+            toggleTOC();
+            break;
+          case '?':
+            e.preventDefault();
+            const help = document.getElementById('shortcuts-help');
+            help.classList.toggle('visible');
+            break;
+        }
+      }
+
+      // Initialize when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSlideshow);
+      } else {
+        initSlideshow();
+      }
+    </script>
+  </body>
+</html>

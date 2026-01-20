@@ -147,8 +147,13 @@ def filter_instructor_notes(markdown_content, include_instructor_notes=False):
     skip_instructor_note = False
     
     for line in lines:
-        # Check if this line starts an instructor note
+        # Check if this line starts an instructor note (blockquote style)
         if line.strip().startswith('> **INSTRUCTOR NOTE:**'):
+            skip_instructor_note = True
+            continue
+        
+        # Check if this line starts an instructor note (plain text style)
+        if '**Instructor Notes:**' in line or '**INSTRUCTOR NOTE:**' in line:
             skip_instructor_note = True
             continue
         
@@ -157,11 +162,22 @@ def filter_instructor_notes(markdown_content, include_instructor_notes=False):
             # If this line is still part of the blockquote, skip it
             if line.startswith('> ') or line.strip() == '>':
                 continue
-            # If we hit a non-blockquote line, we're done with the instructor note
-            else:
+            # If this line is part of a list (instructor notes are often followed by lists)
+            elif line.strip().startswith('-') or line.strip().startswith('*') or (line.strip() and line.strip()[0].isdigit() and '.' in line[:3]):
+                continue
+            # If this is a blank line, it might be part of the instructor note
+            elif line.strip() == '':
+                continue
+            # If we hit a header or horizontal rule, we're done with the instructor note
+            elif line.strip().startswith('#') or line.strip().startswith('---') or line.strip().startswith('***'):
                 skip_instructor_note = False
-                # Don't skip this line since it's not part of the instructor note
                 filtered_lines.append(line)
+            else:
+                # Non-empty, non-list, non-header line - might be end of instructor note
+                # Check if it looks like regular content
+                if len(line.strip()) > 0 and not line.strip().startswith('- '):
+                    skip_instructor_note = False
+                    filtered_lines.append(line)
         else:
             filtered_lines.append(line)
     
@@ -178,6 +194,7 @@ def process_markdown_simple(markdown_content):
     current_list_type = None
     last_list_number = 0  # Track the last number in numbered lists
     in_table = False
+    in_instructor_note = False  # Track if we're inside an instructor note section
     
     for i, line in enumerate(lines):
         # Handle code blocks
@@ -302,13 +319,16 @@ def process_markdown_simple(markdown_content):
             
         # Handle headers with page breaks (# and ## create new pages)
         if line.startswith('## ') and not line.startswith('### '):
-            # Close any open elements before new page
+            # End instructor note section if we're in one
+            in_instructor_note = False
+            # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
                 in_list = False
                 current_list_type = None
                 # Reset numbering at new section (new lab or major section)
                 last_list_number = 0
+            # Close any open tables
             if in_table:
                 html_lines.append('</tbody></table>')
                 in_table = False
@@ -319,13 +339,16 @@ def process_markdown_simple(markdown_content):
             continue
         
         elif line.startswith('# ') and not line.startswith('## '):
-            # Close any open elements before new page
+            # End instructor note section if we're in one
+            in_instructor_note = False
+            # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
                 in_list = False
                 current_list_type = None
                 # Reset numbering at new section
                 last_list_number = 0
+            # Close any open tables
             if in_table:
                 html_lines.append('</tbody></table>')
                 in_table = False
@@ -337,6 +360,9 @@ def process_markdown_simple(markdown_content):
         
         # Handle other headers (h3, h4, etc.)
         elif line.startswith('### '):
+            # End instructor note section if we're in one
+            in_instructor_note = False
+            # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
                 in_list = False
@@ -348,6 +374,9 @@ def process_markdown_simple(markdown_content):
             html_lines.append(f'<h3 id="{heading_id}">{html.escape(title_text)}</h3>')
             continue
         elif line.startswith('#### '):
+            # End instructor note section if we're in one
+            in_instructor_note = False
+            # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
                 in_list = False
@@ -364,6 +393,9 @@ def process_markdown_simple(markdown_content):
         
         # Handle horizontal rules
         if line.strip() == '---':
+            # End instructor note section if we're in one
+            in_instructor_note = False
+            # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
                 in_list = False
@@ -378,6 +410,10 @@ def process_markdown_simple(markdown_content):
         
         # Handle lists
         if line.strip().startswith('- ') or line.strip().startswith('* ') or re.match(r'^\s*\d+\.\s', line):
+            # Skip list items that are part of instructor notes
+            if in_instructor_note:
+                continue
+                
             new_list_type = 'ol' if re.match(r'^\s*\d+\.\s', line) else 'ul'
             
             # If we're switching list types, close the current list
@@ -469,14 +505,25 @@ def process_markdown_simple(markdown_content):
         # Handle regular paragraphs
         if line.strip():
             processed_line = process_inline_markdown(line)
+            
+            # Check if this is the start of an instructor note section
+            if '**Instructor Notes:**' in line or '**INSTRUCTOR NOTE:**' in line:
+                in_instructor_note = True
+                # Skip adding this line to output
+                continue
+            
+            # Skip content that's part of instructor notes
+            if in_instructor_note:
+                continue
+            
             html_lines.append(f'<p>{processed_line}</p>')
         else:
+            # Just add empty line
             html_lines.append('')
     
     # Close any remaining open elements
     if in_list:
         html_lines.append(f'</{current_list_type}>')
-        last_list_number = 0
     if in_table:
         html_lines.append('</tbody></table>')
     if code_block_stack:
@@ -748,6 +795,17 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
         # Use provided title or fallback to directory name
         doc_title = pdf_title if pdf_title else directory.name
         
+        # Auto-detect slideshow directories and use slideshow template for HTML
+        is_slideshow = False
+        dir_name_lower = directory.name.lower()
+        if 'slide' in dir_name_lower or 'presentation' in dir_name_lower:
+            is_slideshow = True
+            # Use slideshow template for HTML output, but keep requested template for PDF
+            html_template_name = 'slideshow'
+            print(f"📊 Detected slideshow content - using slideshow template for HTML")
+        else:
+            html_template_name = template_name
+        
         # Ensure output directory exists
         output_file.parent.mkdir(parents=True, exist_ok=True)
         
@@ -807,7 +865,8 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
             # Join all parts without automatic page breaks
             html_content = ''.join(html_parts)
             
-            full_html = create_complete_html(html_content, doc_title, toc_items, include_toc, template_name)
+            # Use slideshow template for HTML if detected, but keep original template for PDF
+            full_html = create_complete_html(html_content, doc_title, toc_items, include_toc, html_template_name)
             
             # Save HTML file for inspection
             html_output_path = output_file.with_suffix('.html')
@@ -842,6 +901,10 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
                         '--print-to-pdf=' + str(output_file),
                         f'file://{temp_html_path}'
                     ]
+                    
+                    # Add landscape option for slideshows
+                    if is_slideshow:
+                        cmd.insert(4, '--print-to-pdf-no-header')
                     
                     result = subprocess.run(cmd, capture_output=True, timeout=60)
                     if result.returncode == 0 and Path(output_file).exists():
