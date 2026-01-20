@@ -21,7 +21,7 @@
         padding: 0;
         background: #1a1a1a;
         color: #333;
-        overflow: hidden;
+        overflow: auto;
         height: 100vh;
       }
 
@@ -142,7 +142,6 @@
           flex: 1;
           display: flex;
           flex-direction: column;
-          overflow: hidden;
           position: relative;
           background: white;
           min-height: 100vh;
@@ -151,21 +150,15 @@
         .slide {
           display: none;
           width: 100%;
-          height: 100%;
           padding: 60px 80px;
           background: white;
-          overflow: hidden;
+          box-sizing: border-box;
         }
 
         .slide.active {
-          display: flex;
-          flex-direction: column;
+          display: block;
           overflow-y: auto;
-        }
-
-        .slide-content {
-          flex: 1;
-          padding-right: 20px;
+          height: 100%;
         }
 
         .controls {
@@ -493,9 +486,30 @@
 
         // Start from index 1 if we have a title page
         const startIndex = hasTitlePage ? 1 : 0;
+        
+        // Skip TOC section if present
+        let inTOCSection = false;
 
         for (let i = startIndex; i < allElements.length; i++) {
           const el = allElements[i];
+          
+          // Check if this is the "Table of Contents" header
+          if ((el.tagName === 'H1' || el.tagName === 'H2') && el.textContent.trim() === 'Table of Contents') {
+            inTOCSection = true;
+            continue;
+          }
+          
+          // If we're in the TOC section, skip until we hit an H1 that's not the TOC
+          if (inTOCSection) {
+            // Found the next real section - stop skipping
+            if (el.tagName === 'H1') {
+              inTOCSection = false;
+              // Process this H1 normally below
+            } else {
+              // Still in TOC section - skip this element
+              continue;
+            }
+          }
 
           // Check if this is a slide break (any h1, h2, or h3 starts a new slide)
           if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3') {
@@ -535,14 +549,10 @@
           slideDiv.className = 'slide';
           slideDiv.id = `slide-${index}`;
 
-          const slideContent = document.createElement('div');
-          slideContent.className = 'slide-content';
-
           slide.elements.forEach((el) => {
-            slideContent.appendChild(el.cloneNode(true));
+            slideDiv.appendChild(el.cloneNode(true));
           });
 
-          slideDiv.appendChild(slideContent);
           content.appendChild(slideDiv);
         });
 
