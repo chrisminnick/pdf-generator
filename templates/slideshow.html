@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -15,8 +15,9 @@
       }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-          Oxygen, Ubuntu, Cantarell, sans-serif;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
         margin: 0;
         padding: 0;
         background: #1a1a1a;
@@ -31,7 +32,7 @@
           background: white;
           overflow: visible;
         }
-        
+
         .slide-container {
           display: block !important;
           position: static !important;
@@ -304,7 +305,8 @@
         }
 
         /* Hide instructor notes in student version */
-        blockquote:has(strong:first-child) strong:first-child:is([text*="INSTRUCTOR NOTE"]) {
+        blockquote:has(strong:first-child)
+          strong:first-child:is([text*='INSTRUCTOR NOTE']) {
           display: none;
         }
 
@@ -317,12 +319,12 @@
           color: #555;
           font-size: 1.2em;
         }
-        
+
         /* Specifically hide instructor notes */
         blockquote:has(strong) {
           display: block;
         }
-        
+
         blockquote strong:first-child {
           display: inline;
         }
@@ -334,8 +336,9 @@
           padding: 1.5em;
           margin: 1em 0;
           overflow-x: auto;
-          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono',
-            Consolas, 'Courier New', monospace;
+          font-family:
+            'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas,
+            'Courier New', monospace;
           font-size: 1.1em;
           line-height: 1.5;
         }
@@ -345,8 +348,9 @@
           border: 1px solid #e9ecef;
           border-radius: 3px;
           padding: 0.2em 0.4em;
-          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono',
-            Consolas, 'Courier New', monospace;
+          font-family:
+            'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas,
+            'Courier New', monospace;
           font-size: 1.1em;
         }
 
@@ -486,19 +490,22 @@
 
         // Start from index 1 if we have a title page
         const startIndex = hasTitlePage ? 1 : 0;
-        
+
         // Skip TOC section if present
         let inTOCSection = false;
 
         for (let i = startIndex; i < allElements.length; i++) {
           const el = allElements[i];
-          
+
           // Check if this is the "Table of Contents" header
-          if ((el.tagName === 'H1' || el.tagName === 'H2') && el.textContent.trim() === 'Table of Contents') {
+          if (
+            (el.tagName === 'H1' || el.tagName === 'H2') &&
+            el.textContent.trim() === 'Table of Contents'
+          ) {
             inTOCSection = true;
             continue;
           }
-          
+
           // If we're in the TOC section, skip until we hit an H1 that's not the TOC
           if (inTOCSection) {
             // Found the next real section - stop skipping
@@ -512,7 +519,11 @@
           }
 
           // Check if this is a slide break (any h1, h2, or h3 starts a new slide)
-          if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3') {
+          if (
+            el.tagName === 'H1' ||
+            el.tagName === 'H2' ||
+            el.tagName === 'H3'
+          ) {
             // Save previous slide if it has content
             if (currentSlideElements.length > 0) {
               const title = getSlideTitle(currentSlideElements);
@@ -581,7 +592,11 @@
       function getSlideTitle(elements) {
         // Find first h1, h2, or h3
         for (const el of elements) {
-          if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3') {
+          if (
+            el.tagName === 'H1' ||
+            el.tagName === 'H2' ||
+            el.tagName === 'H3'
+          ) {
             let title = el.textContent.trim();
             // Remove "Slide X.Y:" prefix if present
             title = title.replace(/^Slide\s+[\d.]+:\s*/i, '');

@@ -1027,7 +1027,7 @@ Features:
         str(directory_path), 
         args.output, 
         args.dist_dir, 
-        include_toc=not args.no_toc, 
+        include_toc=args.no_toc, 
         template_name=args.template,
         include_instructor_notes=args.instructor,
         pdf_title=args.title
