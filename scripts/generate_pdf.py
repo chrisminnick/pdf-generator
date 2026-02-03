@@ -803,6 +803,10 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
             # Use slideshow template for HTML output, but keep requested template for PDF
             html_template_name = 'slideshow'
             print(f"📊 Detected slideshow content - using slideshow template for HTML")
+        elif 'lab' in dir_name_lower:
+            # Use interactive labs template for HTML output, but keep requested template for PDF
+            html_template_name = 'labs-interactive'
+            print(f"📝 Detected labs content - using interactive labs template for HTML")
         else:
             html_template_name = template_name
         
