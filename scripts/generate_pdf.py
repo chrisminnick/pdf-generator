@@ -428,9 +428,14 @@ def process_markdown_simple(markdown_content):
                     html_lines.append('</tbody></table>')
                     in_table = False
                 
-                # For numbered lists, add start attribute to continue from where we left off
-                if new_list_type == 'ol' and last_list_number > 0:
-                    html_lines.append(f'<{new_list_type} start="{last_list_number + 1}">')
+                # For numbered lists, extract the first number from the markdown and use it as start value
+                if new_list_type == 'ol':
+                    number_match = re.match(r'^\s*(\d+)\.\s+', line)
+                    if number_match:
+                        start_number = int(number_match.group(1))
+                        html_lines.append(f'<{new_list_type} start="{start_number}">')
+                    else:
+                        html_lines.append(f'<{new_list_type}>')
                 else:
                     html_lines.append(f'<{new_list_type}>')
                 in_list = True
