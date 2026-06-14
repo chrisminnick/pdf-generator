@@ -466,7 +466,7 @@
 
       // Initialize slideshow
       function initSlideshow() {
-        // Parse slides from content (each h1 or h2 starts a new slide)
+        // Parse slides from content (each h1, h2, or h3 starts a new slide)
         const content = document.getElementById('slides-container');
         const allElements = Array.from(content.children);
 
@@ -474,7 +474,32 @@
         let currentSlideElements = [];
         slides = [];
 
-        // Check if first element is title page
+        function isSlideHeading(el) {
+          return (
+            el.tagName === 'H1' ||
+            el.tagName === 'H2' ||
+            el.tagName === 'H3'
+          );
+        }
+
+        function isTableOfContentsHeading(el) {
+          return isSlideHeading(el) && el.textContent.trim() === 'Table of Contents';
+        }
+
+        function pushCurrentSlide() {
+          if (currentSlideElements.length > 0) {
+            const title = getSlideTitle(currentSlideElements);
+            const level = getSlideLevel(currentSlideElements);
+            slides.push({
+              elements: currentSlideElements,
+              title: title,
+              level: level,
+            });
+            currentSlideElements = [];
+          }
+        }
+
+        // Check if first element is an explicit title-page wrapper
         let hasTitlePage = false;
         if (
           allElements.length > 0 &&
@@ -488,68 +513,47 @@
           hasTitlePage = true;
         }
 
-        // Start from index 1 if we have a title page
+        // Start from index 1 if we have a title-page wrapper
         const startIndex = hasTitlePage ? 1 : 0;
 
-        // Skip TOC section if present
+        // Skip generated and in-content TOC sections. Resume at the next slide heading.
         let inTOCSection = false;
 
         for (let i = startIndex; i < allElements.length; i++) {
           const el = allElements[i];
 
-          // Check if this is the "Table of Contents" header
-          if (
-            (el.tagName === 'H1' || el.tagName === 'H2') &&
-            el.textContent.trim() === 'Table of Contents'
-          ) {
+          // The generator may inject a complete TOC as one wrapper div.
+          if (el.classList && el.classList.contains('toc')) {
+            continue;
+          }
+
+          // Check if this is an in-content "Table of Contents" header.
+          if (isTableOfContentsHeading(el)) {
             inTOCSection = true;
             continue;
           }
 
-          // If we're in the TOC section, skip until we hit an H1 that's not the TOC
+          // If we're in the TOC section, skip until the next real slide heading.
+          // H3 headings are valid slide starts in course decks.
           if (inTOCSection) {
-            // Found the next real section - stop skipping
-            if (el.tagName === 'H1') {
+            if (isSlideHeading(el)) {
               inTOCSection = false;
-              // Process this H1 normally below
+              // Process this heading normally below.
             } else {
-              // Still in TOC section - skip this element
               continue;
             }
           }
 
-          // Check if this is a slide break (any h1, h2, or h3 starts a new slide)
-          if (
-            el.tagName === 'H1' ||
-            el.tagName === 'H2' ||
-            el.tagName === 'H3'
-          ) {
-            // Save previous slide if it has content
-            if (currentSlideElements.length > 0) {
-              const title = getSlideTitle(currentSlideElements);
-              const level = getSlideLevel(currentSlideElements);
-              slides.push({
-                elements: currentSlideElements,
-                title: title,
-                level: level,
-              });
-              currentSlideElements = [];
-            }
+          // Any h1, h2, or h3 starts a new slide.
+          if (isSlideHeading(el)) {
+            pushCurrentSlide();
           }
 
           currentSlideElements.push(el);
         }
 
         // Add last slide
-        if (currentSlideElements.length > 0) {
-          const title = getSlideTitle(currentSlideElements);
-          const level = getSlideLevel(currentSlideElements);
-          slides.push({
-            elements: currentSlideElements,
-            title: title,
-            level: level,
-          });
-        }
+        pushCurrentSlide();
 
         // Clear original content
         content.innerHTML = '';
