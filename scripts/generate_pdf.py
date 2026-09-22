@@ -388,7 +388,9 @@ def process_markdown_simple(markdown_content, include_instructor_notes=False):
                 last_list_number = 0
             title_text = line[4:].strip()
             heading_id = create_heading_id(title_text)
-            html_lines.append(f'<h3 id="{heading_id}">{html.escape(title_text)}</h3>')
+            # Show "Slide 1.2: Title" as "1.2: Title" (the id keeps the full heading)
+            display_text = re.sub(r'^Slide\s+(?=\d)', '', title_text)
+            html_lines.append(f'<h3 id="{heading_id}">{html.escape(display_text)}</h3>')
             last_h3_title = re.sub(r'^Slide [\d.]+:\s*', '', title_text).strip().lower()
             continue
         elif line.startswith('#### '):
