@@ -183,9 +183,11 @@ def filter_instructor_notes(markdown_content, include_instructor_notes=False):
     
     return '\n'.join(filtered_lines)
 
-def process_markdown_simple(markdown_content):
+def process_markdown_simple(markdown_content, include_instructor_notes=False):
     """
-    Simple markdown to HTML conversion with slide breaks, lists, and tables
+    Simple markdown to HTML conversion with slide breaks, lists, and tables.
+    Instructor notes are dropped unless include_instructor_notes is True, in which
+    case they are wrapped in <div class="instructor-notes"> for styling.
     """
     lines = markdown_content.split('\n')
     html_lines = []
@@ -195,6 +197,18 @@ def process_markdown_simple(markdown_content):
     last_list_number = 0  # Track the last number in numbered lists
     in_table = False
     in_instructor_note = False  # Track if we're inside an instructor note section
+    notes_open = False  # True while an instructor-notes <div> is open
+    last_h3_title = None  # For dropping a bold title that repeats the slide heading
+
+    def close_notes():
+        nonlocal notes_open, in_list, current_list_type
+        if notes_open:
+            if in_list:
+                html_lines.append(f'</{current_list_type}>')
+                in_list = False
+                current_list_type = None
+            html_lines.append('</div>')
+            notes_open = False
     
     for i, line in enumerate(lines):
         # Handle code blocks
@@ -321,6 +335,7 @@ def process_markdown_simple(markdown_content):
         if line.startswith('## ') and not line.startswith('### '):
             # End instructor note section if we're in one
             in_instructor_note = False
+            close_notes()
             # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
@@ -341,6 +356,7 @@ def process_markdown_simple(markdown_content):
         elif line.startswith('# ') and not line.startswith('## '):
             # End instructor note section if we're in one
             in_instructor_note = False
+            close_notes()
             # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
@@ -362,6 +378,7 @@ def process_markdown_simple(markdown_content):
         elif line.startswith('### '):
             # End instructor note section if we're in one
             in_instructor_note = False
+            close_notes()
             # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
@@ -372,10 +389,12 @@ def process_markdown_simple(markdown_content):
             title_text = line[4:].strip()
             heading_id = create_heading_id(title_text)
             html_lines.append(f'<h3 id="{heading_id}">{html.escape(title_text)}</h3>')
+            last_h3_title = re.sub(r'^Slide [\d.]+:\s*', '', title_text).strip().lower()
             continue
         elif line.startswith('#### '):
             # End instructor note section if we're in one
             in_instructor_note = False
+            close_notes()
             # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
@@ -395,6 +414,7 @@ def process_markdown_simple(markdown_content):
         if line.strip() == '---':
             # End instructor note section if we're in one
             in_instructor_note = False
+            close_notes()
             # Close list first if open
             if in_list:
                 html_lines.append(f'</{current_list_type}>')
@@ -411,7 +431,7 @@ def process_markdown_simple(markdown_content):
         # Handle lists
         if line.strip().startswith('- ') or line.strip().startswith('* ') or re.match(r'^\s*\d+\.\s', line):
             # Skip list items that are part of instructor notes
-            if in_instructor_note:
+            if in_instructor_note and not include_instructor_notes:
                 continue
                 
             new_list_type = 'ol' if re.match(r'^\s*\d+\.\s', line) else 'ul'
@@ -514,14 +534,38 @@ def process_markdown_simple(markdown_content):
             # Check if this is the start of an instructor note section
             if '**Instructor Notes:**' in line or '**INSTRUCTOR NOTE:**' in line:
                 in_instructor_note = True
-                # Skip adding this line to output
+                if include_instructor_notes and not notes_open:
+                    if in_list:
+                        html_lines.append(f'</{current_list_type}>')
+                        in_list = False
+                        current_list_type = None
+                    html_lines.append('<div class="instructor-notes"><p class="instructor-notes-label">Instructor Notes</p>')
+                    notes_open = True
+                    rest = re.sub(r'.*\*\*(Instructor Notes|INSTRUCTOR NOTE):\*\*', '', line).strip()
+                    if rest:
+                        html_lines.append(f'<p>{process_inline_markdown(rest)}</p>')
                 continue
             
-            # Skip content that's part of instructor notes
-            if in_instructor_note:
+            # Skip content that's part of instructor notes (student edition)
+            if in_instructor_note and not include_instructor_notes:
                 continue
             
-            html_lines.append(f'<p>{processed_line}</p>')
+            stripped = line.strip()
+            bold_only = re.fullmatch(r'\*\*([^*]+)\*\*:?', stripped)
+            # Drop a bold line that only repeats the slide heading above it
+            if bold_only and last_h3_title and bold_only.group(1).strip().lower() == last_h3_title:
+                last_h3_title = None
+                continue
+            last_h3_title = None
+            p_class = ''
+            if stripped.startswith('**Key practice:**'):
+                p_class = 'key-practice'
+            elif re.match(r'\*\*(Note|Tip|Caution|Warning|Important):\*\*', stripped):
+                p_class = 'callout callout-' + re.match(r'\*\*(\w+):', stripped).group(1).lower()
+            elif bold_only:
+                p_class = 'subhead'
+            class_attr = f' class="{p_class}"' if p_class else ''
+            html_lines.append(f'<p{class_attr}>{processed_line}</p>')
         else:
             # Just add empty line
             html_lines.append('')
@@ -529,6 +573,8 @@ def process_markdown_simple(markdown_content):
     # Close any remaining open elements
     if in_list:
         html_lines.append(f'</{current_list_type}>')
+        in_list = False
+    close_notes()
     if in_table:
         html_lines.append('</tbody></table>')
     if code_block_stack:
@@ -600,7 +646,11 @@ def create_complete_html(html_content, title, toc_items=None, include_toc=True, 
     template = load_template(template_name)
     
     # Replace placeholders in template
-    return template.replace('{{title}}', html.escape(title)).replace('{{content}}', html_content)
+    # {{title_css}} is the title as a CSS string body (for @page footers)
+    title_css = title.replace('\\', '\\\\').replace('"', '\\"').replace('<', '\\3C ')
+    return (template.replace('{{title_css}}', title_css)
+            .replace('{{title}}', html.escape(title))
+            .replace('{{content}}', html_content))
 
 def generate_toc_html(toc_items):
     """
@@ -783,7 +833,7 @@ def combine_markdown_files(directory_path):
     
     return title_page_content, '\n'.join(main_content)
 
-def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_toc=True, template_name="default", include_instructor_notes=False, pdf_title=None):
+def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_toc=True, template_name="default", include_instructor_notes=False, pdf_title=None, brand="watzthis"):
     """
     Convert all markdown files in a directory to PDF
     """
@@ -814,6 +864,17 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
             print(f"📝 Detected labs content - using interactive labs template for HTML")
         else:
             html_template_name = template_name
+
+        # Brand templates: one template drives both the saved HTML and the PDF.
+        # --brand none restores the original template behavior.
+        if brand and brand != 'none':
+            if template_name in ('default', brand):
+                html_template_name = f'{brand}-slides' if is_slideshow else brand
+            elif template_name == 'setup-and-outline':
+                html_template_name = f'{brand}-outline'
+            if not (Path(__file__).parent.parent / 'templates' / f'{html_template_name}.html').exists():
+                html_template_name = template_name
+            print(f"🎨 Using {html_template_name} template")
         
         # Ensure output directory exists
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -849,11 +910,16 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
             
             # Process title page if it exists
             if title_page_content:
-                title_page_html = process_markdown_simple(title_page_content)
+                title_page_html = '<section class="title-page">' + process_markdown_simple(title_page_content, include_instructor_notes) + '</section>'
+                # Use the title page's heading as the document title when none was given
+                if not pdf_title:
+                    m = re.search(r'^#\s+(.+)$', title_page_content, re.MULTILINE)
+                    if m:
+                        doc_title = m.group(1).strip()
             
             # Process main content
             if main_content:
-                main_content_html = process_markdown_simple(main_content)
+                main_content_html = process_markdown_simple(main_content, include_instructor_notes)
             
             # Combine HTML parts with TOC in the correct order
             html_parts = []
@@ -907,6 +973,7 @@ def markdown_to_pdf(directory_path, output_file=None, dist_dir="dist", include_t
                         '--headless',
                         '--disable-gpu',
                         '--no-pdf-header-footer',
+                        '--virtual-time-budget=10000',
                         '--print-to-pdf=' + str(output_file),
                         f'file://{temp_html_path}'
                     ]
@@ -1014,6 +1081,12 @@ Features:
     )
     
     parser.add_argument(
+        '--brand',
+        default='watzthis',
+        help='Brand template family: watzthis (default) or none for the original templates'
+    )
+    
+    parser.add_argument(
         '--title',
         help='Document title for PDF metadata (default: directory name)'
     )
@@ -1036,10 +1109,11 @@ Features:
         str(directory_path), 
         args.output, 
         args.dist_dir, 
-        include_toc=args.no_toc, 
+        include_toc=not args.no_toc, 
         template_name=args.template,
         include_instructor_notes=args.instructor,
-        pdf_title=args.title
+        pdf_title=args.title,
+        brand=args.brand
     )
     
     if success:
