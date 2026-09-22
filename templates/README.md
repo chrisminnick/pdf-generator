@@ -4,6 +4,15 @@ This directory contains HTML templates for the PDF generator. Each template defi
 
 ## Available Templates
 
+### watzthis.html, watzthis-slides.html, watzthis-outline.html (default)
+
+- **Style**: The WatzThis design system: black and white, Source Serif 4 headings, Source Sans 3 body, JetBrains Mono code, one blue accent (#105BA1), WT mark on the title page and slides
+- **Chosen automatically** when `--template` is `default` (or `watzthis`): slide directories get `watzthis-slides` (US Letter landscape, one slide per page, dark module dividers), everything else gets `watzthis` (A4, labs start on a new page, section headings don't). `--template setup-and-outline` maps to `watzthis-outline` (continuous flow).
+- **Recognizes**: `**Key practice:**` lines (blue takeaway bar), `**Note:**` / `**Tip:**` / `**Caution:**` / `**Warning:**` / `**Important:**` paragraphs (callouts), instructor notes (dashed box, `--instructor` builds only), fences with no language (light prompt blocks) vs. fences with a language (dark code blocks)
+- **Fonts**: loaded from Google Fonts at build time; install the three families locally for offline builds
+- **Editing**: the three files are generated. Change `make_templates.py`, then run `python3 templates/make_templates.py`
+- **Opt out**: `--brand none` uses the original templates exactly as before
+
 ### default.html
 
 - **Style**: Professional, modern sans-serif design
